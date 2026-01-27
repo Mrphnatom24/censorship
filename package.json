@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "next": "16.1.5",
+    "pii-filter": "^1.0.24",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
