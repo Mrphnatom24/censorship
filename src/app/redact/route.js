@@ -1,5 +1,8 @@
+// Ruta API para censurar texto usando NLP y PII-Filter (Taurus Engine)
+
 import { NextResponse } from 'next/server';
 import nlp from 'compromise';
+
 // Importamos según el estándar que muestran los ejemplos de la documentación
 import * as pf from 'pii-filter';
 

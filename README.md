@@ -1,36 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Censorship
 
-## Getting Started
+**Censorship** es una aplicación desarrollada en Next.js (JavaScript) que demuestra el potencial de combinar procesamiento de lenguaje natural (NLP) y filtrado de patrones para la protección de datos sensibles.
 
-First, run the development server:
+## 🚀 Propósito
+La aplicación permite anonimizar textos mediante el uso de **placeholders**, utilizando una arquitectura híbrida para maximizar la cobertura lingüística y técnica.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ Stack Tecnológico
+La censura se apoya en las siguientes librerias:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1.  **[Compromise](https://github.com/nlp-compromise/es-compromise):** Utilizado por su alta capacidad de personalización. Se encarga principalmente de la detección de entidades gramaticales (nombres, lugares, organizaciones).
+2.  **[pii-filter (HabaneroCake)](https://github.com/HabaneroCake/pii-filter):** Una librería robusta para la detección de información de identificación personal (PII). Aunque su variedad lingüística es más acotada (enfocada inicialmente en holandés), aporta precisión quirúrgica en patrones universales como emails, teléfonos y fechas.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Estructura del Proyecto
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* `src/app/page.js`: Interfaz de usuario (Frontend) para la entrada de texto y visualización de resultados.
+* `src/app/redact/route.js`: Este endpoint recibe el texto y aplica las capas de censura de ambas librerías antes de devolver el resultado protegido.
 
-## Learn More
+## 🔍 Funcionamiento de la Censura
+El motor aplica una limpieza en dos fases:
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* **Fase 1 (NLP):** Sustituye nombres propios detectados por etiquetas limpias como `[NOMBRE]`.
+* **Fase 2 (Pattern Matching):** Identifica emails, números de teléfono y medicamentos, unificando los placeholders técnicos de `pii-filter` con el formato legible de Taurus.
