@@ -5,29 +5,56 @@ import nlp from 'compromise';
 
 // Importamos según el estándar que muestran los ejemplos de la documentación
 import * as pf from 'pii-filter';
+import { rateLimitMiddleware } from '@/lib/rate-limit';
+
+// Cache para modelos de lenguaje (singleton)
+let cachedLangModel = null;
+let cachedPiiFilter = null;
+
+function getPiiFilter() {
+  if (!cachedLangModel) {
+    cachedLangModel = pf.languages.nl.make_lm();
+    cachedPiiFilter = pf.make_pii_classifier(cachedLangModel);
+  }
+  return cachedPiiFilter;
+}
 
 export async function POST(req) {
   try {
+    // Apply rate limiting
+    const rateLimitHeaders = rateLimitMiddleware(req);
+    
     const { text } = await req.json();
 
-    if (!text) return NextResponse.json({ error: "No text" }, { status: 400 });
+    // Validaciones de entrada
+    if (!text || typeof text !== 'string') {
+      return NextResponse.json({ error: "Texto inválido" }, { status: 400 });
+    }
+    
+    if (text.length > 10000) {
+      return NextResponse.json({ 
+        error: "Texto demasiado largo (máximo 10,000 caracteres)" 
+      }, { status: 400 });
+    }
+    
+    // Sanitización básica
+    const sanitizedText = text.trim().slice(0, 10000);
 
     // --- Configuración según la Documentación ---
-    // 1. Creamos el modelo de lenguaje (Language Model)
-    const langModel = pf.languages.nl.make_lm();
-    
-    // 2. Creamos el clasificador PII para Taurus
-    const pii_filter = pf.make_pii_classifier(langModel);
+    // 1. Obtenemos el clasificador PII (con cache)
+    const pii_filter = getPiiFilter();
 
     // --- Proceso de Censura ---
     
     // Paso 1: NLP (Compromise) para nombres en español/inglés
     // - Es mas personalizable que el PII-Filter y captura nombres completos
-    const doc = nlp(text);
+    const doc = nlp(sanitizedText);
     doc.people().replaceWith('[NOMBRE]');
     doc.places().replaceWith('[LUGAR]');
     doc.organizations().replaceWith('[ORGANIZACIÓN]');
     doc.emails().replaceWith('[EMAIL]');
+    doc.phoneNumbers().replaceWith('[TELÉFONO]');
+  
 
     const intermediateText = doc.text();
 
@@ -45,13 +72,29 @@ export async function POST(req) {
       .replace(/{medicine_name}/g, '[MEDICAMENTO]')
       .replace(/{date}/g, '[FECHA]');
 
-    return NextResponse.json({ censored: intermediateText });
+    // Return response with rate limit headers
+    return NextResponse.json({ censored: cleanCensored }, {
+      headers: rateLimitHeaders
+    });
     
   } catch (err) {
     console.error("Error en Taurus Engine:", err);
+    
+    // Handle rate limit error specifically
+    if (err.status === 429) {
+      return NextResponse.json({ 
+        error: "Demasiadas solicitudes",
+        message: err.message,
+        retryAfter: err.headers?.['Retry-After']
+      }, { 
+        status: 429,
+        headers: err.headers
+      });
+    }
+    
     return NextResponse.json({ 
-        error: "Error de ejecución", 
-        message: err.message 
+      error: "Error de ejecución", 
+      message: err.message 
     }, { status: 500 });
   }
 }
