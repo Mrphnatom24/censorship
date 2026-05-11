@@ -33,7 +33,7 @@ const PATTERNS: PiiPattern[] = [
   { regex: /\b[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]\b/gi, label: 'CIF', placeholder: '[CIF]' },
 
   // IP address (validated octet ranges)
-  { regex: /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g, label: 'IP', placeholder: '[IP]' },
+  { regex: /\b((?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|((?<![a-fA-F0-9])(?:[a-fA-F0-9]{1,4}:){2,7}[a-fA-F0-9]{1,4}(?![a-fA-F0-9]))\b/g, label: 'IP', placeholder: '[IP]' },
 
   // Spanish phone: optional +34/0034 prefix, starts with 6–9, 9 digits total
   { regex: /(?<!\d)(?:\+34|0034)?[\s\-]?(([6-9]\d{2}[\s.\-]?\d{3}[\s.\-]?\d{3})|([6-9]\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}[\s.\-]?\d{2}))(?!\d)/g, label: 'TELÉFONO', placeholder: '[TELÉFONO]' },
