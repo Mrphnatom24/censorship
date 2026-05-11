@@ -5,7 +5,7 @@ export default function Page() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const procesar = async () => {
     if (!input.trim()) {
@@ -16,23 +16,23 @@ export default function Page() {
     setLoading(true);
     setError(null);
     setOutput('');
-    
+
     try {
       const res = await fetch('/redact', {
         method: 'POST',
         body: JSON.stringify({ text: input }),
         headers: { 'Content-Type': 'application/json' },
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || `Error ${res.status}: ${data.message || 'Error desconocido'}`);
       }
-      
+
       setOutput(data.censored);
     } catch (err) {
-      setError(err.message || 'Error al procesar el texto');
+      setError(err instanceof Error ? err.message : 'Error al procesar el texto');
       console.error('Error en censura:', err);
     } finally {
       setLoading(false);
@@ -42,22 +42,22 @@ export default function Page() {
   return (
     <div className="p-5 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Taurus Redactor</h2>
-      
-      <textarea 
-        className="w-full h-40 p-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg 
-                   bg-white dark:bg-gray-900 text-gray-900 dark:text-white 
+
+      <textarea
+        className="w-full h-40 p-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg
+                   bg-white dark:bg-gray-900 text-gray-900 dark:text-white
                    focus:ring-2 focus:ring-blue-500 focus:border-transparent
                    disabled:opacity-50 disabled:cursor-not-allowed"
-        onChange={(e) => setInput(e.target.value)} 
+        onChange={(e) => setInput(e.target.value)}
         placeholder="Escribe aquí el texto que quieres anonimizar..."
         disabled={loading}
       />
-      
-      <button 
+
+      <button
         onClick={procesar}
         className={`mt-4 px-6 py-3 text-lg font-medium rounded-lg transition-colors
-                   ${loading 
-                     ? 'bg-gray-400 cursor-not-allowed' 
+                   ${loading
+                     ? 'bg-gray-400 cursor-not-allowed'
                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                    } text-white`}
         disabled={loading}
@@ -72,7 +72,7 @@ export default function Page() {
           </span>
         ) : 'Censurar Ahora'}
       </button>
-      
+
       {error && (
         <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-center">
@@ -84,11 +84,11 @@ export default function Page() {
           <p className="mt-1 text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
-      
+
       {output && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold text-green-600 dark:text-green-400 mb-2">Resultado:</h3>
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700
                         rounded-lg whitespace-pre-wrap break-words font-mono">
             {output}
           </div>
@@ -102,9 +102,7 @@ export default function Page() {
   );
 }
 
-// Función auxiliar para contar placeholders
-function countPlaceholders(text) {
-  const placeholderRegex = /\[[A-ZÁÉÍÓÚÑ]+\]/g;
-  const matches = text.match(placeholderRegex);
+export function countPlaceholders(text: string): number {
+  const matches = text.match(/\[[A-ZÁÉÍÓÚÑ]+\]/g);
   return matches ? matches.length : 0;
 }
