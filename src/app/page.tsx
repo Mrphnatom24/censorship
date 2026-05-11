@@ -1,9 +1,29 @@
 'use client';
 import { useState } from 'react';
 
+const LABEL_COLORS: Record<string, string> = {
+  DNI: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  NIE: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  CIF: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  IBAN: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  TARJETA: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  EMAIL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  TELÉFONO: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  URL: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  IP: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  NOMBRE: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  LUGAR: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  ORGANIZACIÓN: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  MATRÍCULA: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  PASAPORTE: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  NSS: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  FECHA: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+};
+
 export default function Page() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
+  const [summary, setSummary] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +36,7 @@ export default function Page() {
     setLoading(true);
     setError(null);
     setOutput('');
+    setSummary({});
 
     try {
       const res = await fetch('/redact', {
@@ -31,6 +52,7 @@ export default function Page() {
       }
 
       setOutput(data.censored);
+      setSummary(data.summary ?? {});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al procesar el texto');
       console.error('Error en censura:', err);
@@ -38,6 +60,8 @@ export default function Page() {
       setLoading(false);
     }
   };
+
+  const totalEntities = Object.values(summary).reduce((a, b) => a + b, 0);
 
   return (
     <div className="p-5 max-w-2xl mx-auto">
@@ -92,10 +116,27 @@ export default function Page() {
                         rounded-lg whitespace-pre-wrap break-words font-mono">
             {output}
           </div>
+
           <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
             <span>Caracteres: {output.length}</span>
-            <span>Entidades detectadas: {countPlaceholders(output)}</span>
+            <span>Entidades detectadas: {totalEntities}</span>
           </div>
+
+          {totalEntities > 0 && (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Desglose por categoría:</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(summary).map(([label, count]) => (
+                  <span
+                    key={label}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${LABEL_COLORS[label] ?? 'bg-gray-100 text-gray-800'}`}
+                  >
+                    {label}: {count}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

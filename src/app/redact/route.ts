@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
 import nlp from 'compromise';
-import * as pf from 'pii-filter';
 import { rateLimitMiddleware, RateLimitError } from '@/lib/rate-limit';
-
-let cachedLangModel: ReturnType<typeof pf.languages.nl.make_lm> | null = null;
-let cachedPiiFilter: ReturnType<typeof pf.make_pii_classifier> | null = null;
-
-function getPiiFilter(): ReturnType<typeof pf.make_pii_classifier> {
-  if (!cachedLangModel) {
-    cachedLangModel = pf.languages.nl.make_lm();
-    cachedPiiFilter = pf.make_pii_classifier(cachedLangModel);
-  }
-  return cachedPiiFilter!;
-}
+import { applyPiiPatterns } from '@/lib/pii-patterns';
 
 export async function POST(req: Request) {
   try {
@@ -33,29 +22,25 @@ export async function POST(req: Request) {
 
     const sanitizedText = text.trim().slice(0, 10000);
 
-    const pii_filter = getPiiFilter();
+    // Phase 1: regex-based detection for structured Spanish PII (DNI, NIE, IBAN, etc.)
+    const { text: afterRegex, summary } = applyPiiPatterns(sanitizedText);
 
-    const doc = nlp(sanitizedText);
+    // Phase 2: NLP-based detection for unstructured entities (primarily English names/places).
+    // compromise is English-focused; it provides a best-effort catch for international names
+    // and organisations that may appear in mixed-language documents.
+    const doc = nlp(afterRegex);
     doc.people().replaceWith('[NOMBRE]');
     doc.places().replaceWith('[LUGAR]');
     doc.organizations().replaceWith('[ORGANIZACIÓN]');
-    doc.emails().replaceWith('[EMAIL]');
-    doc.phoneNumbers().replaceWith('[TELÉFONO]');
+    const censored = doc.text();
 
-    const intermediateText = doc.text();
+    // Tally entities added by the NLP pass
+    for (const label of ['NOMBRE', 'LUGAR', 'ORGANIZACIÓN'] as const) {
+      const count = (censored.match(new RegExp(`\\[${label}\\]`, 'g')) ?? []).length;
+      if (count > 0) summary[label] = count;
+    }
 
-    const sanitized_str = pii_filter.sanitize_str(intermediateText, true);
-
-    const cleanCensored = sanitized_str
-      .replace(/{first_name}/g, '[NOMBRE]')
-      .replace(/{family_name}/g, '[NOMBRE]')
-      .replace(/{pet_name}/g, '[NOMBRE]')
-      .replace(/{email_address}/g, '[EMAIL]')
-      .replace(/{phone_number}/g, '[TELÉFONO]')
-      .replace(/{medicine_name}/g, '[MEDICAMENTO]')
-      .replace(/{date}/g, '[FECHA]');
-
-    return NextResponse.json({ censored: cleanCensored }, { headers: rateLimitHeaders });
+    return NextResponse.json({ censored, summary }, { headers: rateLimitHeaders });
   } catch (err) {
     console.error('Error en Taurus Engine:', err);
 
